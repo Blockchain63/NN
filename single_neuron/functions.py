@@ -16,7 +16,7 @@ def initialize_with_zeros(dim):
 
     w = np.zeros(shape=(dim, 1), dtype=np.float32)
 
-    b = 0
+    b = 0.
 
     assert(w.shape == (dim, 1))
     assert(isinstance(b, float) or isinstance(b, int))
@@ -130,7 +130,7 @@ def model(X_train, Y_train, X_test, Y_test, num_iterations = 2000, learning_rate
     
     return d
 
-def analysis(learning_rates):
+def analysis(learning_rates, train_set_x, train_set_y, test_set_x, test_set_y):
 
 	models = {}
 	for i in learning_rates:
