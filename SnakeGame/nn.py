@@ -10,8 +10,8 @@ from collections import Counter
 
 class SnakeNN:
     #Конструктор
-    def __init__(self, train_games = 25000, test_games = 2500, goal_steps = 2000, lr = 0.01, filename = 'snake_nn.tflearn', test_filename='test_observations'):
-        self.train_games = train_games  #размер обучающей выборки (в играх)
+    def __init__(self, train_games = 25000, test_games = 1000, goal_steps = 2000, lr = 0.01, filename = 'snake_nn.tflearn', test_filename='test_observations'):
+        self.train_games = train_games      #размер обучающей выборки (в играх)
         self.test_games = test_games        #размер тестовой выборки
         self.goal_steps = goal_steps        #количество дествий за игру
         self.lr = lr
@@ -21,8 +21,8 @@ class SnakeNN:
         # 1 - RIGHT
         # 2 - DOWN
         # 3 - LEFT
-        #Вектор для перемещения от соответсвующих клавиш
-        self.vectors_and_keys = [
+        #Вектор для перемещения для соответсвующих клавиш
+        self.keys_to_vectors = [
                 [[-1, 0], 0],
                 [[0, 1], 1],
                 [[1, 0], 2],
@@ -90,7 +90,7 @@ class SnakeNN:
         elif action == 1:
             new_direction = self.turn_vector_to_the_right(snake_direction)
         #Ищем соответствие
-        for pair in self.vectors_and_keys:
+        for pair in self.keys_to_vectors:
             if pair[0] == new_direction.tolist():
                 game_action = pair[1]
         return game_action
@@ -139,16 +139,9 @@ class SnakeNN:
         #Инициализация входного слоя
         network = input_data(shape=[None, 5, 1], name='input')
         #Проход через скрытый слой с relu
-        network = fully_connected(network, 40, activation='relu')
-        network = dropout(network, keep_prob=0.4)
-        network = fully_connected(network, 30, activation='softplus')
-        network = dropout(network, keep_prob=0.6)
-        network = fully_connected(network, 30, activation='softplus')
-        network = dropout(network, keep_prob=0.3)
-        network = fully_connected(network, 30, activation='relu')
-        network = dropout(network, keep_prob=0.7)
+        network = fully_connected(network,100,activation='relu')
         #Выходной слой с линейной активацией
-        network = fully_connected(network, 1, activation='tanh')
+        network = fully_connected(network, 1, activation='linear')
         #Оптимизатор
         network = regression(network, optimizer='adam', learning_rate=self.lr, loss='mean_square', name='target')
         #Сборка модели НН где network - тензор
@@ -249,14 +242,46 @@ class SnakeNN:
         nn_model.load(model_file=self.filename)
         self.test_model(nn_model,print_stats,save_obs)
 
+    def multi_train(self, generations):
+        training_data = self.generate_train_data(add_test=False)
+        nn_model = self.model()
+        nn_model = self.train_model(training_data,nn_model)
+        for i in range(0, generations):
+            print("generation:" + str(i + 1))
+            self.test_model(nn_model,print_stats=False,save_obs=True,print_avrg=True)
+            training_data = self.generate_train_data(add_test=True)
+            nn_model = self.train_model(training_data,nn_model)
+
 
 
 
 
 if __name__ == "__main__":
-    #SnakeNN().train(False)
-    SnakeNN().test(print_stats=True,save_obs=True)
-    #SnakeNN().train(True)
-    #SnakeNN().test(print_stats=False,save_obs=True)
-    #SnakeNN().test(print_stats=True, save_obs=False)
-    #SnakeNN().visualise()
+    print("1 - train without adding test observations")
+    print("2 - train with adding saved test observations")
+    print("3 - test without saving observations")
+    print("4 - test with saving observations")
+    print("5 - visualise")
+    print("6 - multiple train-test-train")
+    ans = input()
+    if(ans == '1'):
+        SnakeNN().train(False)
+    elif(ans == '2'):
+        SnakeNN().train(True)
+    elif(ans == '3'):
+        pr_st = input("print stats?(y/n)")
+        if(pr_st == 'y'):
+            SnakeNN().test(print_stats=True,save_obs=True)
+        if (pr_st == 'n'):
+            SnakeNN().test(print_stats=False, save_obs=True)
+    elif(ans == '4'):
+        pr_st = input("print stats?(y/n)")
+        if (pr_st == 'y'):
+            SnakeNN().test(print_stats=True, save_obs=False)
+        if (pr_st == 'n'):
+            SnakeNN().test(print_stats=False, save_obs=False)
+    elif(ans == '5'):
+        SnakeNN().visualise()
+    elif(ans == '6'):
+        gen = input("number of generations:")
+        SnakeNN().multi_train(generations=int(gen))
