@@ -36,23 +36,20 @@ class SnakeNN:
         self.leraning_rate = leraning_rate
         self.filename = filename
         self.test_filename = test_filename
-        # 0 - Вверх
-        # 1 - Вправо
-        # 2 - Вниз
-        # 3 - Влево
-        # Вектор для перемещения для соответсвующих клавиш
+
+        # Векторы перемещения для соответсвующих движений('клавиш')
         self.keys_to_vectors = [
-            [[-1, 0], 0],
-            [[0, 1], 1],
-            [[1, 0], 2],
-            [[0, -1], 3]
+            [[-1, 0], 0],   # Вверх
+            [[0, 1], 1],    # Вправо
+            [[1, 0], 2],    # Вниз
+            [[0, -1], 3]    # Влево
         ]
 
     def generate_train_data(self, add_test=False):
         training_data = []
         for i in range(self.trains):
             game = SnakeGame()
-            _done, prev_score, snake, food = game.start()
+            done, prev_score, snake, food = game.start()
             prev_observation = self.generate_observation(snake, food)
             prev_food_distance = self.get_food_distance(snake, food)
             for j in range(self.max_steps):
@@ -61,21 +58,22 @@ class SnakeNN:
                 # Меняем состояние игры после совершения действия
                 done, score, snake, food = game.step(game_action)
                 if done:
-                    # Если завершена то добавить в тренеровочные данные наблюдения с действием и -1
+                    # Если игра завершена(змейка умерла) то добавить в тренеровочные данные наблюдения с действием и оценкой -1
                     training_data.append([self.merge_action_and_observation(prev_observation, action), -1])
                     break
                 else:
                     food_distance = self.get_food_distance(snake, food)
                     # Иначе если счет увеличился или расстояние до еды сократилось
                     if score > prev_score or food_distance < prev_food_distance:
-                        # Добавить в тренеровочные данные наблюдения с действием и 1
+                        # Добавить в тренеровочные данные наблюдения с действием и оценкой 1
                         training_data.append([self.merge_action_and_observation(prev_observation, action), 1])
                     else:
-                        # Иначе добавить в тренеровочные данные наблюдения с действием и 0
+                        # Иначе добавить в тренеровочные данные наблюдения с действием и оценкой 0
                         training_data.append([self.merge_action_and_observation(prev_observation, action), 0])
                     prev_observation = self.generate_observation(snake, food)
                     prev_food_distance = food_distance
         if add_test:
+            # Дополнительная догрузка данных с предыдущих тестов
             X = np.load(file=self.test_filename + ' x.npy')
             Y = np.load(file=self.test_filename + ' y.npy')
             X.reshape(-1, 5, 1)
@@ -117,32 +115,32 @@ class SnakeNN:
         angle = get_angle(snake_direction, food_direction)
         return np.array([int(barrier_left), int(barrier_front), int(barrier_right), angle])
 
-    @staticmethod
-    def merge_action_and_observation(observation, action):
+    
+    def merge_action_and_observation(self,observation, action):
         return np.append([action], observation)
 
-    @staticmethod
-    def get_snake_direction_vector(snake):
+    
+    def get_snake_direction_vector(self,snake):
         return np.array(snake[0]) - np.array(snake[1])
 
-    @staticmethod
+
     def get_food_direction_vector(self, snake, food):
         return np.array(food) - np.array(snake[0])
 
-    @staticmethod
+
     def get_food_distance(self, snake, food):
         return np.linalg.norm(self.get_food_direction_vector(snake, food))
 
-    @staticmethod
+    
     def is_direction_blocked(self, snake, direction):
         point = np.array(snake[0]) + np.array(direction)
         return point.tolist() in snake[:-1] or point[0] == 0 or point[1] == 0 or point[0] == 21 or point[1] == 21
 
-    @staticmethod
+    
     def turn_vector_to_the_left(self, vector):
         return np.array([-vector[1], vector[0]])
 
-    @staticmethod
+    
     def turn_vector_to_the_right(self, vector):
         return np.array([vector[1], -vector[0]])
 
